@@ -7,6 +7,7 @@ import PlacementCard from "@/components/PlacementCard";
 import ChatInterface from "@/components/ChatInterface";
 import JobForm from "@/components/JobForm";
 import BulkSummary from "@/components/BulkSummary";
+import CardDisplay from "@/components/CardDisplay";
 import { api } from "@/lib/api";
 import {
   Sparkles,
@@ -19,15 +20,17 @@ import {
   Clock,
   Search,
   FileText,
-  Edit3
+  Edit3,
+  Camera
 } from "lucide-react";
 
 export default function Home() {
   const [currentPlacement, setCurrentPlacement] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
-  const [view, setView] = useState<"upload" | "details" | "history" | "bulk">("upload");
+  const [view, setView] = useState<"upload" | "details" | "history" | "bulk" | "cards">("upload");
   const [sheetUrl, setSheetUrl] = useState<string | null>(null);
   const [bulkResults, setBulkResults] = useState<any[]>([]);
+  const [currentCard, setCurrentCard] = useState<any>(null);
 
   const fetchHistory = async () => {
     try {
@@ -63,6 +66,18 @@ export default function Home() {
       setView("details");
     }
     fetchHistory();
+  };
+
+  const handleCardUploadSuccess = (data: any | any[]) => {
+    if (Array.isArray(data)) {
+      setBulkResults(data);
+      setSheetUrl(data[0].sheetUrl);
+      setView("bulk"); // We can reuse the bulk view for cards as well
+    } else {
+      setCurrentCard(data);
+      setSheetUrl(data.sheetUrl);
+      setView("cards");
+    }
   };
 
   const handleSavePost = async (updatedData: any) => {
@@ -142,6 +157,13 @@ export default function Home() {
             <span>Dashboard</span>
           </button>
           <button
+            onClick={() => setView("cards")}
+            className={`nav-link ${view === "cards" ? "active" : ""}`}
+          >
+            <FileText size={20} />
+            <span>Card Registration</span>
+          </button>
+          <button
             onClick={() => setView("history")}
             className={`nav-link ${view === "history" ? "active" : ""}`}
           >
@@ -156,7 +178,7 @@ export default function Home() {
             <span className="text-xs font-bold uppercase tracking-wider">New</span>
           </div>
           <p className="text-xs text-text-muted mb-4">
-            Scan a new placement poster to get instant insights.
+            Scan a new placement poster or visiting card.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <button
@@ -165,7 +187,15 @@ export default function Home() {
               style={{ padding: '10px', fontSize: '13px' }}
             >
               <PlusCircle size={16} />
-              <span>New Scan</span>
+              <span>New Job Scan</span>
+            </button>
+            <button
+              onClick={() => setView("cards")}
+              className="btn-secondary w-full"
+              style={{ padding: '10px', fontSize: '13px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            >
+              <Camera size={16} />
+              <span>Card Scan</span>
             </button>
             <button
               onClick={() => {
@@ -245,6 +275,57 @@ export default function Home() {
             </div>
           )}
 
+          {view === "cards" && (
+            <div className="fade-in">
+              <div className="hero-section">
+                <div className="hero-badge" style={{ background: '#f59e0b15', color: '#f59e0b' }}>
+                  <Camera size={12} /> CARD REGISTRATION
+                </div>
+                <h2 className="hero-title">
+                  Scan Registration & <br />
+                  <span style={{ color: '#f59e0b', fontStyle: 'italic' }}>Visiting Cards.</span>
+                </h2>
+                <p className="hero-subtitle">
+                  Capture contact details instantly from physical cards. Data is automatically synced to the Registration Google Sheet.
+                </p>
+              </div>
+
+              {!currentCard ? (
+                <FileUploader 
+                  onUploadSuccess={handleCardUploadSuccess} 
+                  endpoint="/api/analyze-card"
+                />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => setCurrentCard(null)}
+                      style={{ background: 'none', border: 'none', color: '#f59e0b', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
+                      ← New Card Scan
+                    </button>
+                    {sheetUrl && (
+                      <a
+                        href={sheetUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hero-badge"
+                        style={{ margin: 0, textDecoration: 'none', background: '#10b98115', color: '#10b981', border: '1px solid #10b98120' }}
+                      >
+                        <FileText size={12} /> View Registration Sheet
+                      </a>
+                    )}
+                  </div>
+                  
+                  <CardDisplay 
+                    data={currentCard.extraction} 
+                    imagePath={api.imageUrl(currentCard.imagePath)} 
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           {view === "details" && currentPlacement && (
             <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
               <div className="flex items-center justify-between">
@@ -304,8 +385,13 @@ export default function Home() {
             <BulkSummary
               results={bulkResults}
               onSelectItem={(item) => {
-                setCurrentPlacement(item);
-                setView("details");
+                if (item.extraction.card_type) {
+                  setCurrentCard(item);
+                  setView("cards");
+                } else {
+                  setCurrentPlacement(item);
+                  setView("details");
+                }
               }}
               sheetUrl={sheetUrl}
             />

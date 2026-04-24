@@ -6,9 +6,10 @@ import { api } from "@/lib/api";
 
 interface FileUploaderProps {
   onUploadSuccess: (data: any | any[]) => void;
+  endpoint?: string;
 }
 
-export default function FileUploader({ onUploadSuccess }: FileUploaderProps) {
+export default function FileUploader({ onUploadSuccess, endpoint = "/api/analyze" }: FileUploaderProps) {
   const [mode, setMode] = useState<"upload" | "paste" | "camera">("upload");
   const [files, setFiles] = useState<File[]>([]);
   const [text, setText] = useState("");
@@ -17,14 +18,38 @@ export default function FileUploader({ onUploadSuccess }: FileUploaderProps) {
   const [loading, setLoading] = useState(false);
   const [currentFileIndex, setCurrentFileIndex] = useState(-1);
   const [error, setError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(e.target.files || []);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement> | React.DragEvent) => {
+    let selectedFiles: File[] = [];
+    if ('target' in e && (e.target as HTMLInputElement).files) {
+      selectedFiles = Array.from((e.target as HTMLInputElement).files || []);
+    } else if ('dataTransfer' in e) {
+      selectedFiles = Array.from(e.dataTransfer.files);
+    }
+
     if (selectedFiles.length > 0) {
-      setFiles(selectedFiles);
-      setPreview(URL.createObjectURL(selectedFiles[0]));
+      setFiles(prev => [...prev, ...selectedFiles]);
+      if (!preview) {
+        setPreview(URL.createObjectURL(selectedFiles[0]));
+      }
       setError(null);
     }
+  };
+
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const onDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    handleFileChange(e);
   };
 
   const handleUpload = async () => {
@@ -39,7 +64,7 @@ export default function FileUploader({ onUploadSuccess }: FileUploaderProps) {
       try {
         const formData = new FormData();
         formData.append("text", text);
-        const res = await api.upload("/api/analyze", formData);
+        const res = await api.upload(endpoint, formData);
         const data = await res.json();
         if (data.error) throw new Error(data.error);
         onUploadSuccess(data);
@@ -59,7 +84,7 @@ export default function FileUploader({ onUploadSuccess }: FileUploaderProps) {
       formData.append("file", files[i]);
 
       try {
-        const res = await api.upload("/api/analyze", formData);
+        const res = await api.upload(endpoint, formData);
         const data = await res.json();
         if (data.error) throw new Error(data.error);
         allResults.push(data);
@@ -181,12 +206,19 @@ export default function FileUploader({ onUploadSuccess }: FileUploaderProps) {
 
         {(mode === "upload" || (mode === "camera" && files.length > 0)) && (
           mode === "upload" && files.length === 0 ? (
-            <label className="uploader-dropzone">
-              <div className="logo-icon" style={{ width: '80px', height: '80px', marginBottom: '24px' }}>
+            <label 
+              className={`uploader-dropzone ${isDragging ? "dragging" : ""}`}
+              onDragOver={onDragOver}
+              onDragLeave={onDragLeave}
+              onDrop={onDrop}
+            >
+              <div className="logo-icon" style={{ width: '80px', height: '80px', marginBottom: '24px', transform: isDragging ? 'scale(1.1)' : 'scale(1)', transition: 'all 0.2s ease' }}>
                 <Upload size={32} />
               </div>
               <div>
-                <p style={{ fontSize: '20px', fontWeight: '800', color: '#1e1b4b', marginBottom: '8px' }}>Click to upload posters</p>
+                <p style={{ fontSize: '20px', fontWeight: '800', color: '#1e1b4b', marginBottom: '8px' }}>
+                  {isDragging ? "Drop your files here" : "Click or drag to upload posters"}
+                </p>
                 <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Select multiple images (Max 10MB each)</p>
               </div>
               <input
@@ -198,8 +230,13 @@ export default function FileUploader({ onUploadSuccess }: FileUploaderProps) {
               />
             </label>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div className="preview-box">
+            <div 
+              style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}
+              onDragOver={onDragOver}
+              onDragLeave={onDragLeave}
+              onDrop={onDrop}
+            >
+              <div className={`preview-box ${isDragging ? "dragging" : ""}`}>
                 <div className="preview-img-container" style={{ position: 'relative' }}>
                   <img
                     src={preview!}
@@ -209,6 +246,14 @@ export default function FileUploader({ onUploadSuccess }: FileUploaderProps) {
                   {files.length > 1 && (
                     <div style={{ position: 'absolute', bottom: '12px', right: '12px', background: 'var(--primary)', color: 'white', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '800' }}>
                       +{files.length - 1} more
+                    </div>
+                  )}
+                  {isDragging && (
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(59, 130, 246, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', borderRadius: '24px', backdropFilter: 'blur(4px)', zIndex: 10 }}>
+                      <div className="flex flex-col items-center gap-2">
+                        <Upload size={32} />
+                        <span className="font-bold">Add more files</span>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -379,6 +424,15 @@ export default function FileUploader({ onUploadSuccess }: FileUploaderProps) {
         }
         .uploader-tab:hover:not(.active) {
           background: rgba(248, 250, 252, 0.8);
+        }
+        .uploader-dropzone.dragging {
+          border-color: var(--primary);
+          background: rgba(59, 130, 246, 0.05);
+          transform: scale(1.02);
+          box-shadow: 0 8px 24px rgba(59, 130, 246, 0.1);
+        }
+        .uploader-dropzone {
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
       `}</style>
     </div>

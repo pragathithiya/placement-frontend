@@ -40,27 +40,32 @@ export default function BulkSummary({ results, onSelectItem, sheetUrl }: BulkSum
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
-        {results.map((item, i) => (
-          <div 
-            key={i} 
-            onClick={() => onSelectItem(item)}
-            className="glass-panel" 
-            style={{ padding: '20px', cursor: 'pointer', transition: 'all 0.3s ease', display: 'flex', alignItems: 'center', gap: '16px' }}
-          >
-            <div className="logo-icon" style={{ background: '#f0fdf4', color: '#10b981', flexShrink: 0 }}>
-              <FileText size={20} />
+        {results.map((item, i) => {
+          const name = item.companyName || item.extraction.company_name || item.extraction.name || "Unknown";
+          const subtitle = item.extraction.job_role || item.extraction.designation || (item.extraction.card_type ? `${item.extraction.card_type} Card` : "Details Extracted");
+          
+          return (
+            <div 
+              key={i} 
+              onClick={() => onSelectItem(item)}
+              className="glass-panel" 
+              style={{ padding: '20px', cursor: 'pointer', transition: 'all 0.3s ease', display: 'flex', alignItems: 'center', gap: '16px' }}
+            >
+              <div className="logo-icon" style={{ background: '#f0fdf4', color: '#10b981', flexShrink: 0 }}>
+                <FileText size={20} />
+              </div>
+              <div style={{ flex: 1, overflow: 'hidden' }}>
+                <h4 style={{ fontSize: '16px', fontWeight: '800', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {name}
+                </h4>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                  {subtitle}
+                </p>
+              </div>
+              <ChevronRight size={18} className="text-text-muted" />
             </div>
-            <div style={{ flex: 1, overflow: 'hidden' }}>
-              <h4 style={{ fontSize: '16px', fontWeight: '800', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {item.companyName || "Unknown Company"}
-              </h4>
-              <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                {item.extraction.job_role || "Job Details Extracted"}
-              </p>
-            </div>
-            <ChevronRight size={18} className="text-text-muted" />
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

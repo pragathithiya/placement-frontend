@@ -68,17 +68,7 @@ export default function Home() {
     fetchHistory();
   };
 
-  const handleCardUploadSuccess = (data: any | any[]) => {
-    if (Array.isArray(data)) {
-      setBulkResults(data);
-      setSheetUrl(data[0].sheetUrl);
-      setView("bulk"); // We can reuse the bulk view for cards as well
-    } else {
-      setCurrentCard(data);
-      setSheetUrl(data.sheetUrl);
-      setView("cards");
-    }
-  };
+
 
   const handleSavePost = async (updatedData: any) => {
     if (!currentPlacement?.id) return;
@@ -129,12 +119,28 @@ export default function Home() {
         id: data.placement.id,
         extraction: JSON.parse(data.placement.extracted_data),
         imagePath: api.imageUrl(data.placement.image_path),
-        companyName: data.placement.company_name
+        companyName: data.placement.company_name,
+        sheetUrl: data.sheetUrl || sheetUrl // Keep existing or use new
       });
+      if (data.sheetUrl) setSheetUrl(data.sheetUrl);
       setView("details");
     } catch (err) {
       console.error("Failed to fetch detail:", err);
     }
+  };
+
+  const handleCardUploadSuccess = (data: any | any[]) => {
+    if (Array.isArray(data)) {
+      setBulkResults(data);
+      const url = data[0].sheetUrl;
+      setSheetUrl(url);
+      setView("bulk");
+    } else {
+      setCurrentCard(data);
+      setSheetUrl(data.sheetUrl);
+      setView("cards");
+    }
+    fetchHistory();
   };
 
   return (

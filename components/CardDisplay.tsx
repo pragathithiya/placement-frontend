@@ -11,7 +11,8 @@ interface CardDisplayProps {
     phone?: string;
     website?: string;
     address?: string;
-    card_type?: string;
+    scanned_by?: string;
+    others?: string;
   };
   imagePath?: string;
 }
@@ -31,8 +32,8 @@ export default function CardDisplay({ data, imagePath }: CardDisplayProps) {
               <h3 style={{ fontSize: '20px', fontWeight: '900', color: '#1e1b4b' }}>Extracted Details</h3>
               <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Verified by Gemini Vision</p>
             </div>
-            <div style={{ marginLeft: 'auto', background: data.card_type === 'Visiting' ? '#f59e0b15' : '#10b98115', color: data.card_type === 'Visiting' ? '#f59e0b' : '#10b981', padding: '4px 12px', borderRadius: '20px', fontSize: '10px', fontWeight: '800', border: '1px solid currentColor' }}>
-              {data.card_type?.toUpperCase() || 'CARD'}
+            <div style={{ marginLeft: 'auto', background: '#3b82f615', color: '#3b82f6', padding: '4px 12px', borderRadius: '20px', fontSize: '10px', fontWeight: '800', border: '1px solid currentColor' }}>
+              SCANNED BY: {data.scanned_by?.toUpperCase() || 'UNKNOWN'}
             </div>
           </div>
 
@@ -44,6 +45,7 @@ export default function CardDisplay({ data, imagePath }: CardDisplayProps) {
             <DetailItem icon={Phone} label="Phone" value={data.phone} />
             <DetailItem icon={Globe} label="Website" value={data.website} />
             <DetailItem icon={MapPin} label="Address" value={data.address} />
+            {data.others && <DetailItem icon={FileText} label="Others" value={data.others} />}
           </div>
         </div>
 

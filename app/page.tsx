@@ -18,7 +18,6 @@ import {
   Bot,
   ChevronRight,
   Clock,
-  Search,
   FileText,
   Edit3,
   Camera
@@ -31,6 +30,31 @@ export default function Home() {
   const [sheetUrl, setSheetUrl] = useState<string | null>(null);
   const [bulkResults, setBulkResults] = useState<any[]>([]);
   const [currentCard, setCurrentCard] = useState<any>(null);
+
+  const [userName, setUserName] = useState<string | null>(null);
+  const [loginInput, setLoginInput] = useState("");
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+    const stored = localStorage.getItem("userName");
+    if (stored) setUserName(stored);
+  }, []);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loginInput.trim()) {
+      localStorage.setItem("userName", loginInput.trim());
+      setUserName(loginInput.trim());
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("userName");
+    setUserName(null);
+    setLoginInput("");
+  };
+
 
   const fetchHistory = async () => {
     try {
@@ -142,16 +166,51 @@ export default function Home() {
     }
     fetchHistory();
   };
+  if (!isClient) return null;
+
+  if (!userName) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#f8fafc' }}>
+        <div className="glass-panel" style={{ padding: '40px', width: '100%', maxWidth: '400px', textAlign: 'center' }}>
+          <div className="logo-icon mx-auto mb-6">
+            <Bot size={24} />
+          </div>
+          <h1 style={{ fontSize: '24px', fontWeight: '900', color: '#1e1b4b', marginBottom: '8px' }}>Welcome to Card AI</h1>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '32px', fontSize: '14px' }}>Please enter your name to continue.</p>
+          
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <input
+              type="text"
+              value={loginInput}
+              onChange={(e) => setLoginInput(e.target.value)}
+              placeholder="Your Name (e.g. User 1)"
+              style={{ padding: '16px', borderRadius: '16px', border: '1px solid #e2e8f0', fontSize: '15px', outline: 'none' }}
+              autoFocus
+            />
+            <button type="submit" className="btn-primary" style={{ padding: '16px', fontSize: '15px' }}>
+              Continue
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell">
       {/* Sidebar Navigation */}
       <aside className="sidebar">
-        <div className="nav-logo">
-          <div className="logo-icon">
-            <Briefcase size={22} />
+        <div className="nav-logo" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div className="logo-icon">
+              <Briefcase size={22} />
+            </div>
+            <h1 className="logo-text">Card AI</h1>
           </div>
-          <h1 className="logo-text">PlacementAI</h1>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
+            Logged in as <b>{userName}</b>
+            <span onClick={handleLogout} style={{ cursor: 'pointer', color: 'var(--primary)', marginLeft: '8px', textDecoration: 'underline' }}>Logout</span>
+          </div>
         </div>
 
         <nav className="nav-menu">
@@ -160,14 +219,14 @@ export default function Home() {
             className={`nav-link ${view === "upload" || view === "details" ? "active" : ""}`}
           >
             <LayoutDashboard size={20} />
-            <span>Dashboard</span>
+            <span>Posting Job</span>
           </button>
           <button
             onClick={() => setView("cards")}
             className={`nav-link ${view === "cards" ? "active" : ""}`}
           >
-            <FileText size={20} />
-            <span>Card Registration</span>
+            <img src="/icons/visiting-card.png" alt="Visiting Card" style={{ width: '20px', height: '20px', objectFit: 'contain', filter: view === 'cards' ? 'none' : 'grayscale(1) opacity(0.7)' }} />
+            <span>Visiting Card</span>
           </button>
           <button
             onClick={() => setView("history")}
@@ -188,20 +247,12 @@ export default function Home() {
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <button
-              onClick={() => setView("upload")}
+              onClick={() => setView("cards")}
               className="btn-primary w-full"
               style={{ padding: '10px', fontSize: '13px' }}
             >
-              <PlusCircle size={16} />
-              <span>New Job Scan</span>
-            </button>
-            <button
-              onClick={() => setView("cards")}
-              className="btn-secondary w-full"
-              style={{ padding: '10px', fontSize: '13px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-            >
-              <Camera size={16} />
-              <span>Card Scan</span>
+              <img src="/icons/visiting-card.png" alt="Visiting Card" style={{ width: '16px', height: '16px', objectFit: 'contain' }} />
+              <span>Visiting Card</span>
             </button>
             <button
               onClick={() => {
@@ -240,11 +291,11 @@ export default function Home() {
             <div className="logo-icon" style={{ width: '32px', height: '32px', borderRadius: '8px' }}>
               <Briefcase size={16} />
             </div>
-            <span className="font-bold text-primary">PlacementAI</span>
+            <span className="font-bold text-primary">Card AI</span>
           </div>
           <div className="flex items-center gap-3">
             <div className="hero-badge" style={{ margin: 0, padding: '4px 10px', fontSize: '10px' }}>
-              {view === 'upload' ? 'Dashboard' : view === 'cards' ? 'Card Scan' : view === 'history' ? 'History' : 'Details'}
+              {view === 'upload' ? 'Posting Job' : view === 'cards' ? 'Visiting Card' : view === 'history' ? 'History' : 'Details'}
             </div>
           </div>
         </div>
@@ -275,21 +326,14 @@ export default function Home() {
                       Quickly scan a new poster or card, or enter details manually.
                     </p>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
-                      <button
-                        onClick={() => setView("upload")}
-                        className="btn-primary w-full"
-                        style={{ padding: '14px', borderRadius: '16px' }}
-                      >
-                        <PlusCircle size={18} />
-                        <span>New Job Scan</span>
-                      </button>
+
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                         <button
                           onClick={() => setView("cards")}
                           style={{ padding: '14px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '16px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#1e1b4b', fontSize: '13px' }}
                         >
-                          <Camera size={16} />
-                          <span>Card Scan</span>
+                          <img src="/icons/visiting-card.png" alt="Visiting Card" style={{ width: '16px', height: '16px', objectFit: 'contain' }} />
+                          <span>Visiting Card</span>
                         </button>
                         <button
                           onClick={() => {
@@ -312,21 +356,21 @@ export default function Home() {
                 </div>
               </div>
 
-              <FileUploader onUploadSuccess={handleUploadSuccess} />
+              <FileUploader onUploadSuccess={handleUploadSuccess} userName={userName} />
 
               <div className="feature-cards">
                 {[
-                  { icon: Search, color: "#3b82f6", title: "Llama 4 OCR", desc: "Advanced vision extraction." },
-                  { icon: Sparkles, color: "#8b5cf6", title: "Job Auto-fill", desc: "Forms filled in 1-click." },
                   { icon: Clock, color: "#6366f1", title: "Manvin Rules", desc: "Automatic internship logic." }
                 ].map((item, i) => (
-                  <div key={i} className="feature-card">
-                    <div className="logo-icon" style={{ background: `${item.color}15`, color: item.color, marginBottom: '20px' }}>
-                      <item.icon size={22} />
+                  <Link key={i} href="/docs" style={{ textDecoration: 'none' }}>
+                    <div className="feature-card" style={{ cursor: 'pointer' }}>
+                      <div className="logo-icon" style={{ background: `${item.color}15`, color: item.color, marginBottom: '20px' }}>
+                        <item.icon size={22} />
+                      </div>
+                      <h4 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px' }}>{item.title}</h4>
+                      <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{item.desc}</p>
                     </div>
-                    <h4 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px' }}>{item.title}</h4>
-                    <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{item.desc}</p>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -336,7 +380,7 @@ export default function Home() {
             <div className="fade-in">
               <div className="hero-section">
                 <div className="hero-badge" style={{ background: '#f59e0b15', color: '#f59e0b' }}>
-                  <Camera size={12} /> CARD REGISTRATION
+                  <img src="/icons/visiting-card.png" alt="Visiting Card" style={{ width: '12px', height: '12px', objectFit: 'contain' }} /> VISITING CARD
                 </div>
                 <h2 className="hero-title">
                   Scan Registration & <br />
@@ -351,6 +395,7 @@ export default function Home() {
                 <FileUploader 
                   onUploadSuccess={handleCardUploadSuccess} 
                   endpoint="/api/analyze-card"
+                  userName={userName}
                 />
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
@@ -359,7 +404,7 @@ export default function Home() {
                       onClick={() => setCurrentCard(null)}
                       style={{ background: 'none', border: 'none', color: '#f59e0b', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
-                      ← New Card Scan
+                      ← New Visiting Card
                     </button>
                     {sheetUrl && (
                       <a
@@ -528,7 +573,7 @@ export default function Home() {
               <div className="logo-icon footer-logo">
                 <Briefcase size={16} />
               </div>
-              <span className="footer-logo-text">PlacementAI</span>
+              <span className="footer-logo-text">Card AI</span>
             </div>
 
             <p className="footer-credits">
@@ -549,7 +594,7 @@ export default function Home() {
           className={`bottom-nav-item ${view === "upload" || view === "details" ? "active" : ""}`}
         >
           <LayoutDashboard size={22} />
-          <span>Dashboard</span>
+          <span>Posting Job</span>
         </button>
         
         <button 
@@ -557,9 +602,9 @@ export default function Home() {
           className={`bottom-nav-item ${view === "cards" ? "active" : ""}`}
         >
           <div className="fab-button">
-            <Camera size={24} />
+            <img src="/icons/visiting-card.png" alt="Visiting Card" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
           </div>
-          <span>Scan Card</span>
+          <span>Visiting Card</span>
         </button>
 
         <button 

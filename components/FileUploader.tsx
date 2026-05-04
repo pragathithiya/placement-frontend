@@ -1,15 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { Upload, X, Loader2, Image as ImageIcon, FileText, Sparkles, Camera } from "lucide-react";
+import { useState, useCallback } from "react";
+import { Upload, X, Loader2, Image as ImageIcon, FileText, Sparkles, Camera, Crop } from "lucide-react";
+import Cropper from 'react-easy-crop';
 import { api } from "@/lib/api";
+import getCroppedImg from "@/utils/cropImage";
 
 interface FileUploaderProps {
   onUploadSuccess: (data: any | any[]) => void;
   endpoint?: string;
+  userName?: string;
 }
 
-export default function FileUploader({ onUploadSuccess, endpoint = "/api/analyze" }: FileUploaderProps) {
+export default function FileUploader({ onUploadSuccess, endpoint = "/api/analyze", userName = "Admin" }: FileUploaderProps) {
   const [mode, setMode] = useState<"upload" | "paste" | "camera">("upload");
   const [files, setFiles] = useState<File[]>([]);
   const [text, setText] = useState("");
@@ -19,6 +22,10 @@ export default function FileUploader({ onUploadSuccess, endpoint = "/api/analyze
   const [currentFileIndex, setCurrentFileIndex] = useState(-1);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isCropping, setIsCropping] = useState(false);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement> | React.DragEvent) => {
     let selectedFiles: File[] = [];
@@ -29,9 +36,15 @@ export default function FileUploader({ onUploadSuccess, endpoint = "/api/analyze
     }
 
     if (selectedFiles.length > 0) {
-      setFiles(prev => [...prev, ...selectedFiles]);
-      if (!preview) {
+      if (selectedFiles.length === 1) {
+        setFiles(selectedFiles);
         setPreview(URL.createObjectURL(selectedFiles[0]));
+        setIsCropping(true);
+      } else {
+        setFiles(prev => [...prev, ...selectedFiles]);
+        if (!preview) {
+          setPreview(URL.createObjectURL(selectedFiles[0]));
+        }
       }
       setError(null);
     }
@@ -64,6 +77,7 @@ export default function FileUploader({ onUploadSuccess, endpoint = "/api/analyze
       try {
         const formData = new FormData();
         formData.append("text", text);
+        formData.append("scanned_by", userName);
         const res = await api.upload(endpoint, formData);
         const data = await res.json();
         if (data.error) throw new Error(data.error);
@@ -82,6 +96,7 @@ export default function FileUploader({ onUploadSuccess, endpoint = "/api/analyze
       setCurrentFileIndex(i);
       const formData = new FormData();
       formData.append("file", files[i]);
+      formData.append("scanned_by", userName);
 
       try {
         const res = await api.upload(endpoint, formData);
@@ -140,12 +155,33 @@ export default function FileUploader({ onUploadSuccess, endpoint = "/api/analyze
           const capturedFile = new File([blob], "captured-card.jpg", { type: "image/jpeg" });
           setFiles([capturedFile]);
           setPreview(URL.createObjectURL(capturedFile));
+          setIsCropping(true);
 
           // Stop stream
           stream?.getTracks().forEach(track => track.stop());
           setStream(null);
         }
       }, "image/jpeg");
+    }
+  };
+
+  const onCropComplete = useCallback((_croppedArea: any, croppedAreaPixels: any) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
+
+  const saveCroppedImage = async () => {
+    try {
+      if (!preview || !croppedAreaPixels) return;
+      const croppedImageBlob = await getCroppedImg(preview, croppedAreaPixels);
+      if (croppedImageBlob) {
+        const croppedFile = new File([croppedImageBlob], files[0].name, { type: "image/jpeg" });
+        setFiles([croppedFile]);
+        setPreview(URL.createObjectURL(croppedFile));
+        setIsCropping(false);
+      }
+    } catch (e) {
+      console.error(e);
+      setError("Failed to crop image");
     }
   };
 
@@ -221,7 +257,7 @@ export default function FileUploader({ onUploadSuccess, endpoint = "/api/analyze
                 </p>
                 <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Select multiple images (Max 10MB each)</p>
               </div>
-              <input
+            <input
                 type="file"
                 multiple
                 style={{ display: 'none' }}
@@ -229,6 +265,49 @@ export default function FileUploader({ onUploadSuccess, endpoint = "/api/analyze
                 onChange={handleFileChange}
               />
             </label>
+          ) : isCropping ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={{ position: 'relative', height: '400px', width: '100%', background: '#333', borderRadius: '24px', overflow: 'hidden' }}>
+                <Cropper
+                  image={preview!}
+                  crop={crop}
+                  zoom={zoom}
+                  aspect={undefined}
+                  onCropChange={setCrop}
+                  onCropComplete={onCropComplete}
+                  onZoomChange={setZoom}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={saveCroppedImage}
+                  className="btn-primary"
+                  style={{ flex: 1, padding: '16px' }}
+                >
+                  <Crop size={20} />
+                  <span>CROP & CONTINUE</span>
+                </button>
+                <button
+                  onClick={() => setIsCropping(false)}
+                  style={{ padding: '16px', background: '#f1f5f9', border: 'none', borderRadius: '16px', color: '#64748b', fontWeight: '700', cursor: 'pointer' }}
+                >
+                  Skip
+                </button>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '800', color: '#64748b' }}>ZOOM</span>
+                <input
+                  type="range"
+                  value={zoom}
+                  min={1}
+                  max={3}
+                  step={0.1}
+                  aria-labelledby="Zoom"
+                  onChange={(e: any) => setZoom(e.target.value)}
+                  style={{ flex: 1, accentColor: 'var(--primary)' }}
+                />
+              </div>
+            </div>
           ) : (
             <div 
               style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}

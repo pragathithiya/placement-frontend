@@ -18,7 +18,8 @@ import {
   Phone,
   BarChart,
   Lightbulb,
-  Zap
+  Zap,
+  Mail
 } from "lucide-react";
 
 interface JobFormProps {
@@ -39,6 +40,7 @@ export default function JobForm({ initialData, onSave }: JobFormProps) {
     skills: "",
     hr_name: "",
     hr_phone: "",
+    hr_email: "",
     experience: "",
     qualification: ""
   });
@@ -59,6 +61,7 @@ export default function JobForm({ initialData, onSave }: JobFormProps) {
         skills: initialData.skills || "",
         hr_name: initialData.hr_name || "",
         hr_phone: initialData.hr_phone || "",
+        hr_email: initialData.hr_email || "",
         experience: initialData.experience || "",
         qualification: initialData.qualification || ""
       });
@@ -198,6 +201,10 @@ export default function JobForm({ initialData, onSave }: JobFormProps) {
             <div className="space-y-2">
               <label className="data-label flex items-center gap-2"><Phone size={14} /> Contact Number</label>
               <input type="text" name="hr_phone" value={formData.hr_phone} onChange={handleChange} className="input-field" placeholder="Number for inquiries" />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <label className="data-label flex items-center gap-2"><Mail size={14} /> Contact Email</label>
+              <input type="email" name="hr_email" value={formData.hr_email} onChange={handleChange} className="input-field" placeholder="email@example.com" />
             </div>
           </div>
         </section>

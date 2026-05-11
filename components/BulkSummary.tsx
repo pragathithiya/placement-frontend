@@ -1,6 +1,8 @@
 "use client";
 
-import { CheckCircle, ExternalLink, ChevronRight, FileText } from "lucide-react";
+import { CheckCircle, ExternalLink, ChevronRight, FileText, Mail } from "lucide-react";
+import { useState } from "react";
+import EmailModal from "./EmailModal";
 
 interface BulkSummaryProps {
   results: any[];
@@ -9,6 +11,15 @@ interface BulkSummaryProps {
 }
 
 export default function BulkSummary({ results, onSelectItem, sheetUrl }: BulkSummaryProps) {
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [selectedEmail, setSelectedEmail] = useState("");
+
+  const openEmailModal = (e: React.MouseEvent, email: string) => {
+    e.stopPropagation();
+    setSelectedEmail(email);
+    setIsEmailModalOpen(true);
+  };
+
   return (
     <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       <div className="hero-section" style={{ padding: '40px', background: 'var(--primary)', color: 'white', borderRadius: '32px', position: 'relative', overflow: 'hidden' }}>
@@ -61,12 +72,27 @@ export default function BulkSummary({ results, onSelectItem, sheetUrl }: BulkSum
                 <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                   {subtitle}
                 </p>
+                {(item.extraction.email || item.extraction.hr_email) && (
+                  <div 
+                    onClick={(e) => openEmailModal(e, item.extraction.email || item.extraction.hr_email)}
+                    style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary)', fontSize: '11px', fontWeight: '800', background: 'var(--primary-light, #eef2ff)', padding: '4px 8px', borderRadius: '8px', width: 'fit-content' }}
+                  >
+                    <Mail size={12} />
+                    <span>{item.extraction.email || item.extraction.hr_email}</span>
+                  </div>
+                )}
               </div>
               <ChevronRight size={18} className="text-text-muted" />
             </div>
           );
         })}
       </div>
+
+      <EmailModal 
+        isOpen={isEmailModalOpen} 
+        onClose={() => setIsEmailModalOpen(false)} 
+        toEmail={selectedEmail}
+      />
     </div>
   );
 }

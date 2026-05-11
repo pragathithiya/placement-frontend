@@ -1,6 +1,8 @@
 "use client";
 
 import { User, Building2, Mail, Phone, Globe, MapPin, BadgeCheck, FileText } from "lucide-react";
+import { useState } from "react";
+import EmailModal from "./EmailModal";
 
 interface CardDisplayProps {
   data: {
@@ -18,6 +20,14 @@ interface CardDisplayProps {
 }
 
 export default function CardDisplay({ data, imagePath }: CardDisplayProps) {
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [selectedEmail, setSelectedEmail] = useState("");
+
+  const handleEmailClick = (email: string) => {
+    setSelectedEmail(email);
+    setIsEmailModalOpen(true);
+  };
+
   return (
     <div className="card-display-container fade-in">
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
@@ -41,7 +51,13 @@ export default function CardDisplay({ data, imagePath }: CardDisplayProps) {
             <DetailItem icon={User} label="Name" value={data.name} />
             <DetailItem icon={BadgeCheck} label="Designation" value={data.designation} />
             <DetailItem icon={Building2} label="Company" value={data.company_name} />
-            <DetailItem icon={Mail} label="Email" value={data.email} />
+            <DetailItem 
+              icon={Mail} 
+              label="Email" 
+              value={data.email} 
+              onClick={data.email ? () => handleEmailClick(data.email!) : undefined}
+              isClickable={!!data.email}
+            />
             <DetailItem icon={Phone} label="Phone" value={data.phone} />
             <DetailItem icon={Globe} label="Website" value={data.website} />
             <DetailItem icon={MapPin} label="Address" value={data.address} />
@@ -63,6 +79,13 @@ export default function CardDisplay({ data, imagePath }: CardDisplayProps) {
         )}
       </div>
 
+      <EmailModal 
+        isOpen={isEmailModalOpen} 
+        onClose={() => setIsEmailModalOpen(false)} 
+        toEmail={selectedEmail}
+        defaultSubject={`FOLLOWUP: Regarding ${data.company_name || 'Opportunity'}`}
+      />
+
       <style jsx>{`
         .card-display-container {
           width: 100%;
@@ -72,16 +95,20 @@ export default function CardDisplay({ data, imagePath }: CardDisplayProps) {
   );
 }
 
-function DetailItem({ icon: Icon, label, value }: { icon: any, label: string, value?: string }) {
+function DetailItem({ icon: Icon, label, value, onClick, isClickable }: { icon: any, label: string, value?: string, onClick?: () => void, isClickable?: boolean }) {
   if (!value) return null;
   return (
-    <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-      <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexShrink: 0 }}>
+    <div 
+      style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', cursor: isClickable ? 'pointer' : 'default' }}
+      onClick={onClick}
+      className={isClickable ? "hover-clickable" : ""}
+    >
+      <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: isClickable ? 'var(--primary-light, #eef2ff)' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isClickable ? 'var(--primary)' : 'var(--text-muted)', flexShrink: 0, transition: 'all 0.2s' }}>
         <Icon size={18} />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
         <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</span>
-        <span style={{ fontSize: '15px', fontWeight: '700', color: '#1e1b4b' }}>{value}</span>
+        <span style={{ fontSize: '15px', fontWeight: '700', color: isClickable ? 'var(--primary)' : '#1e1b4b', textDecoration: isClickable ? 'underline' : 'none' }}>{value}</span>
       </div>
     </div>
   );

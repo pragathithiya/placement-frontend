@@ -1,6 +1,8 @@
 "use client";
 
 import { api } from "@/lib/api";
+import { useState } from "react";
+import EmailModal from "./EmailModal";
 import { 
   Building2, 
   MapPin, 
@@ -13,6 +15,7 @@ import {
   Gift,
   User,
   Phone,
+  Mail,
   BarChart,
   Lightbulb,
   CheckCircle2
@@ -32,6 +35,7 @@ interface PlacementCardProps {
     skills?: string;
     hr_name?: string;
     hr_phone?: string;
+    hr_email?: string;
     experience?: string;
     qualification?: string;
     duration?: string;
@@ -41,6 +45,8 @@ interface PlacementCardProps {
 }
 
 export default function PlacementCard({ data, imagePath }: PlacementCardProps) {
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+
   // Map fields to clean UI items
   const mainInfo = [
     { icon: Briefcase, label: "Role", value: data.job_role || data.role || "Not Specified" },
@@ -108,6 +114,14 @@ export default function PlacementCard({ data, imagePath }: PlacementCardProps) {
                     <Phone size={16} className="text-primary" /> {data.hr_phone}
                   </div>
                 )}
+                {data.hr_email && (
+                  <div 
+                    onClick={() => setIsEmailModalOpen(true)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--primary)', fontWeight: '700', cursor: 'pointer', textDecoration: 'underline' }}
+                  >
+                    <Mail size={16} className="text-primary" /> {data.hr_email}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -164,6 +178,13 @@ export default function PlacementCard({ data, imagePath }: PlacementCardProps) {
           </div>
         </div>
       )}
+
+      <EmailModal 
+        isOpen={isEmailModalOpen} 
+        onClose={() => setIsEmailModalOpen(false)} 
+        toEmail={data.hr_email || ""}
+        defaultSubject={`FOLLOWUP: Regarding Opportunity at ${data.company_name || 'your company'}`}
+      />
     </div>
   );
 }

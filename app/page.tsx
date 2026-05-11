@@ -8,19 +8,24 @@ import ChatInterface from "@/components/ChatInterface";
 import JobForm from "@/components/JobForm";
 import BulkSummary from "@/components/BulkSummary";
 import CardDisplay from "@/components/CardDisplay";
+import EmailModal from "@/components/EmailModal";
 import { api } from "@/lib/api";
 import {
   Sparkles,
   History,
-  Briefcase,
+  Contact,
   PlusCircle,
   LayoutDashboard,
   Bot,
+  Briefcase,
   ChevronRight,
   Clock,
+  Search,
   FileText,
   Edit3,
-  Camera
+  Camera,
+  Trash2,
+  Mail
 } from "lucide-react";
 
 export default function Home() {
@@ -30,6 +35,8 @@ export default function Home() {
   const [sheetUrl, setSheetUrl] = useState<string | null>(null);
   const [bulkResults, setBulkResults] = useState<any[]>([]);
   const [currentCard, setCurrentCard] = useState<any>(null);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [selectedEmail, setSelectedEmail] = useState("");
 
   const [userName, setUserName] = useState<string | null>(null);
   const [loginInput, setLoginInput] = useState("");
@@ -39,6 +46,16 @@ export default function Home() {
     setIsClient(true);
     const stored = localStorage.getItem("userName");
     if (stored) setUserName(stored);
+
+    // Handle bulk email from URL parameter (?to=a@b.com,c@d.com)
+    const params = new URLSearchParams(window.location.search);
+    const toParam = params.get("to");
+    if (toParam) {
+      setSelectedEmail(toParam);
+      setIsEmailModalOpen(true);
+      // Clean up URL without refreshing
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
   }, []);
 
   const handleLogin = (e: React.FormEvent) => {
@@ -553,6 +570,15 @@ export default function Home() {
                             <Clock size={12} />
                             {new Date(item.created_at).toLocaleDateString()}
                           </div>
+                          {JSON.parse(item.extracted_data).email || JSON.parse(item.extracted_data).hr_email ? (
+                            <div 
+                              onClick={(e) => openEmailModal(e, JSON.parse(item.extracted_data).email || JSON.parse(item.extracted_data).hr_email)}
+                              style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary)', fontSize: '11px', fontWeight: '800', background: 'rgba(99, 102, 241, 0.05)', padding: '4px 8px', borderRadius: '8px', width: 'fit-content' }}
+                            >
+                              <Mail size={12} />
+                              <span>{JSON.parse(item.extracted_data).email || JSON.parse(item.extracted_data).hr_email}</span>
+                            </div>
+                          ) : null}
                         </div>
                         <div className="logo-icon" style={{ width: '32px', height: '32px', borderRadius: '8px' }}>
                           <ChevronRight size={18} />
@@ -615,6 +641,12 @@ export default function Home() {
           <span>History</span>
         </button>
       </nav>
+
+      <EmailModal 
+        isOpen={isEmailModalOpen} 
+        onClose={() => setIsEmailModalOpen(false)} 
+        toEmail={selectedEmail}
+      />
     </div>
   );
 }

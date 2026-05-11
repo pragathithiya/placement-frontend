@@ -32,6 +32,19 @@ export const api = {
   imageUrl: (path: string) => {
     if (!path) return "";
     if (path.startsWith("http")) return path;
-    return `${API_URL}${path}`;
+    
+    // Clean up the path
+    let cleanPath = path;
+    if (!cleanPath.startsWith("/") && !cleanPath.startsWith("uploads/")) {
+      cleanPath = `/uploads/${cleanPath}`;
+    } else if (!cleanPath.startsWith("/")) {
+      cleanPath = `/${cleanPath}`;
+    }
+    
+    // Ensure API_URL doesn't end with slash and cleanPath starts with one
+    const baseUrl = API_URL.endsWith("/") ? API_URL.slice(0, -1) : API_URL;
+    const finalPath = cleanPath.startsWith("/") ? cleanPath : `/${cleanPath}`;
+    
+    return `${baseUrl}${finalPath}`;
   }
 };

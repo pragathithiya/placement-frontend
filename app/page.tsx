@@ -183,6 +183,12 @@ export default function Home() {
     }
     fetchHistory();
   };
+
+  const openEmailModal = (e: React.MouseEvent, email: string) => {
+    e.stopPropagation();
+    setSelectedEmail(email);
+    setIsEmailModalOpen(true);
+  };
   if (!isClient) return null;
 
   if (!userName) {

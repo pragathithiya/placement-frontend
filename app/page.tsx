@@ -44,7 +44,8 @@ export default function Home() {
 
   useEffect(() => {
     setIsClient(true);
-    const stored = localStorage.getItem("userName");
+    // Use sessionStorage so user logs in every time they open the app/tab
+    const stored = sessionStorage.getItem("userName");
     if (stored) setUserName(stored);
 
     // Handle bulk email from URL parameter (?to=a@b.com,c@d.com)
@@ -53,7 +54,6 @@ export default function Home() {
     if (toParam) {
       setSelectedEmail(toParam);
       setIsEmailModalOpen(true);
-      // Clean up URL without refreshing
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
@@ -61,17 +61,16 @@ export default function Home() {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (loginInput.trim()) {
-      localStorage.setItem("userName", loginInput.trim());
+      sessionStorage.setItem("userName", loginInput.trim());
       setUserName(loginInput.trim());
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("userName");
+    sessionStorage.removeItem("userName");
     setUserName(null);
     setLoginInput("");
   };
-
 
   const fetchHistory = async () => {
     try {
@@ -108,8 +107,6 @@ export default function Home() {
     }
     fetchHistory();
   };
-
-
 
   const handleSavePost = async (updatedData: any) => {
     if (!currentPlacement?.id) return;
@@ -189,32 +186,280 @@ export default function Home() {
     setSelectedEmail(email);
     setIsEmailModalOpen(true);
   };
+
   if (!isClient) return null;
 
   if (!userName) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#f8fafc' }}>
-        <div className="glass-panel" style={{ padding: '40px', width: '100%', maxWidth: '400px', textAlign: 'center' }}>
-          <div className="logo-icon mx-auto mb-6">
-            <Bot size={24} />
-          </div>
-          <h1 style={{ fontSize: '24px', fontWeight: '900', color: '#1e1b4b', marginBottom: '8px' }}>Welcome to Card AI</h1>
-          <p style={{ color: 'var(--text-muted)', marginBottom: '32px', fontSize: '14px' }}>Please enter your name to continue.</p>
-          
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <input
-              type="text"
-              value={loginInput}
-              onChange={(e) => setLoginInput(e.target.value)}
-              placeholder="Your Name (e.g. User 1)"
-              style={{ padding: '16px', borderRadius: '16px', border: '1px solid #e2e8f0', fontSize: '15px', outline: 'none' }}
-              autoFocus
-            />
-            <button type="submit" className="btn-primary" style={{ padding: '16px', fontSize: '15px' }}>
-              Continue
-            </button>
-          </form>
+      <div className="login-screen-container">
+        <div className="login-visual-bg">
+          <div className="blob blob-1"></div>
+          <div className="blob blob-2"></div>
+          <div className="blob blob-3"></div>
         </div>
+
+        <div className="login-card-wrapper fade-in">
+          <div className="login-glass-card">
+            <div className="login-header">
+              <div className="premium-logo">
+                <Sparkles size={28} className="sparkle-icon" />
+                <div className="logo-box">
+                  <Briefcase size={22} />
+                </div>
+              </div>
+              <h1 className="premium-title">Card AI</h1>
+              <p className="premium-subtitle">Your Intelligent Business Companion</p>
+            </div>
+
+            <div className="login-form-area">
+              <div className="welcome-tag">GREETINGS</div>
+              <h2 className="login-heading">Welcome Back</h2>
+              <p className="login-subheading">Enter your name to access your workspace</p>
+              
+              <form onSubmit={handleLogin} className="premium-form">
+                <div className="premium-input-group">
+                  <div className="input-icon-wrapper">
+                    <Contact size={18} />
+                  </div>
+                  <input
+                    type="text"
+                    value={loginInput}
+                    onChange={(e) => setLoginInput(e.target.value)}
+                    placeholder="Full Name"
+                    className="premium-input"
+                    autoFocus
+                    required
+                  />
+                </div>
+                
+                <button type="submit" className="login-submit-btn">
+                  <span>Enter Workspace</span>
+                  <ChevronRight size={18} />
+                </button>
+              </form>
+            </div>
+
+            <div className="login-footer">
+              <p>© 2026 Manvian Group • Secure Access</p>
+            </div>
+          </div>
+          
+          {/* Mobile specific footer info */}
+          <div className="mobile-only-info">
+            <p>Optimized for Mobile Performance</p>
+          </div>
+        </div>
+
+        <style jsx>{`
+          .login-screen-container {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0f172a;
+            overflow: hidden;
+            z-index: 9999;
+            padding: 20px;
+          }
+
+          .login-visual-bg {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            filter: blur(80px);
+            opacity: 0.5;
+          }
+
+          .blob {
+            position: absolute;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+            animation: float 20s infinite alternate;
+          }
+
+          .blob-1 { width: 400px; height: 400px; top: -100px; left: -100px; background: #6366f1; }
+          .blob-2 { width: 500px; height: 500px; bottom: -150px; right: -100px; background: #8b5cf6; animation-delay: -5s; }
+          .blob-3 { width: 300px; height: 300px; top: 40%; left: 60%; background: #ec4899; animation-delay: -10s; }
+
+          @keyframes float {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(100px, 50px) rotate(30deg); }
+          }
+
+          .login-card-wrapper {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 440px;
+          }
+
+          .login-glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(25px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 32px;
+            padding: 48px 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+          }
+
+          .premium-logo {
+            position: relative;
+            display: inline-flex;
+            margin-bottom: 24px;
+          }
+
+          .sparkle-icon {
+            position: absolute;
+            top: -12px;
+            right: -12px;
+            color: #fbbf24;
+            filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.5));
+          }
+
+          .logo-box {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+          }
+
+          .premium-title {
+            font-size: 32px;
+            font-weight: 900;
+            color: white;
+            letter-spacing: -0.02em;
+            margin-bottom: 4px;
+          }
+
+          .premium-subtitle {
+            font-size: 14px;
+            color: #94a3b8;
+            font-weight: 500;
+            margin-bottom: 40px;
+          }
+
+          .login-form-area {
+            text-align: left;
+          }
+
+          .welcome-tag {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            color: #8b5cf6;
+            background: rgba(139, 92, 246, 0.1);
+            padding: 4px 10px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+          }
+
+          .login-heading {
+            font-size: 24px;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 8px;
+          }
+
+          .login-subheading {
+            font-size: 14px;
+            color: #94a3b8;
+            margin-bottom: 32px;
+          }
+
+          .premium-input-group {
+            position: relative;
+            margin-bottom: 20px;
+          }
+
+          .input-icon-wrapper {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #64748b;
+          }
+
+          .premium-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 16px 16px 16px 52px;
+            color: white;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.2s;
+          }
+
+          .premium-input:focus {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15);
+          }
+
+          .login-submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            padding: 18px;
+            font-size: 16px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+          }
+
+          .login-submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 25px rgba(99, 102, 241, 0.4);
+            filter: brightness(1.1);
+          }
+
+          .login-footer {
+            margin-top: 40px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+          }
+
+          .mobile-only-info {
+            display: none;
+            text-align: center;
+            margin-top: 24px;
+            color: #475569;
+            font-size: 12px;
+            font-weight: 600;
+          }
+
+          @media (max-width: 480px) {
+            .login-glass-card {
+              padding: 40px 24px;
+              border-radius: 24px;
+            }
+            .mobile-only-info {
+              display: block;
+            }
+            .premium-title {
+              font-size: 28px;
+            }
+          }
+        `}</style>
       </div>
     );
   }
@@ -621,6 +866,30 @@ export default function Home() {
 
       {/* Bottom Navigation for Mobile */}
       <nav className="bottom-nav">
+        <button 
+          onClick={handleLogout} 
+          className="bottom-nav-item"
+          style={{ color: 'var(--text-muted)' }}
+        >
+          <div style={{ 
+            width: '24px', 
+            height: '24px', 
+            borderRadius: '50%', 
+            background: 'rgba(139, 92, 246, 0.1)', 
+            color: 'var(--primary)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            fontSize: '11px',
+            fontWeight: '900',
+            border: '1.5px solid var(--primary)',
+            marginBottom: '2px'
+          }}>
+            {userName?.charAt(0).toUpperCase()}
+          </div>
+          <span>Logout</span>
+        </button>
+
         <button 
           onClick={() => setView("upload")} 
           className={`bottom-nav-item ${view === "upload" || view === "details" ? "active" : ""}`}

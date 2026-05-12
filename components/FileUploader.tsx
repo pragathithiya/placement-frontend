@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Upload, X, Loader2, Image as ImageIcon, FileText, Sparkles, Camera, Crop } from "lucide-react";
-import Cropper from 'react-easy-crop';
+import { Upload, X, Loader2, Image as ImageIcon, FileText, Sparkles, Camera, Crop, RotateCw } from "lucide-react";
+import ReactCrop, { type Crop as CropType, centerCrop, makeAspectCrop, PixelCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 import { api } from "@/lib/api";
 import getCroppedImg from "@/utils/cropImage";
 
@@ -23,9 +24,12 @@ export default function FileUploader({ onUploadSuccess, endpoint = "/api/analyze
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isCropping, setIsCropping] = useState(false);
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+  const [crop, setCrop] = useState<CropType>();
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
+  const [rotation, setRotation] = useState(0);
+  const [imgRef, setImgRef] = useState<HTMLImageElement | null>(null);
+
+
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement> | React.DragEvent) => {
     let selectedFiles: File[] = [];
@@ -39,7 +43,7 @@ export default function FileUploader({ onUploadSuccess, endpoint = "/api/analyze
       if (selectedFiles.length === 1) {
         setFiles(selectedFiles);
         setPreview(URL.createObjectURL(selectedFiles[0]));
-        setIsCropping(true);
+        // Removed auto setIsCropping(true) as per user request
       } else {
         setFiles(prev => [...prev, ...selectedFiles]);
         if (!preview) {
@@ -155,7 +159,7 @@ export default function FileUploader({ onUploadSuccess, endpoint = "/api/analyze
           const capturedFile = new File([blob], "captured-card.jpg", { type: "image/jpeg" });
           setFiles([capturedFile]);
           setPreview(URL.createObjectURL(capturedFile));
-          setIsCropping(true);
+          // Removed auto setIsCropping(true) as per user request
 
           // Stop stream
           stream?.getTracks().forEach(track => track.stop());
@@ -165,14 +169,22 @@ export default function FileUploader({ onUploadSuccess, endpoint = "/api/analyze
     }
   };
 
-  const onCropComplete = useCallback((_croppedArea: any, croppedAreaPixels: any) => {
-    setCroppedAreaPixels(croppedAreaPixels);
-  }, []);
 
   const saveCroppedImage = async () => {
     try {
-      if (!preview || !croppedAreaPixels) return;
-      const croppedImageBlob = await getCroppedImg(preview, croppedAreaPixels);
+      if (!preview || !completedCrop || !imgRef) return;
+      
+      const scaleX = imgRef.naturalWidth / imgRef.width;
+      const scaleY = imgRef.naturalHeight / imgRef.height;
+      
+      const pixelCrop = {
+        x: completedCrop.x * scaleX,
+        y: completedCrop.y * scaleY,
+        width: completedCrop.width * scaleX,
+        height: completedCrop.height * scaleY
+      };
+
+      const croppedImageBlob = await getCroppedImg(preview, pixelCrop, rotation);
       if (croppedImageBlob) {
         const croppedFile = new File([croppedImageBlob], files[0].name, { type: "image/jpeg" });
         setFiles([croppedFile]);
@@ -184,6 +196,40 @@ export default function FileUploader({ onUploadSuccess, endpoint = "/api/analyze
       setError("Failed to crop image");
     }
   };
+
+  const cancelCrop = () => {
+    setIsCropping(false);
+    setCrop(undefined);
+    setCompletedCrop(undefined);
+    setRotation(0);
+  };
+
+
+  const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { width, height } = e.currentTarget;
+    setImgRef(e.currentTarget);
+    
+    const initialCrop = centerCrop(
+      makeAspectCrop(
+        { unit: '%', width: 80 },
+        endpoint === "/api/analyze-card" ? 1.58 : undefined as any,
+        width,
+        height
+      ),
+      width,
+      height
+    );
+    setCrop(initialCrop);
+    setCompletedCrop({
+      unit: 'px',
+      x: (width - (width * 0.8)) / 2,
+      y: (height - (height * 0.8)) / 2,
+      width: width * 0.8,
+      height: height * 0.8
+    });
+  };
+
+
 
   return (
     <div className="glass-panel uploader-root">
@@ -265,49 +311,6 @@ export default function FileUploader({ onUploadSuccess, endpoint = "/api/analyze
                 onChange={handleFileChange}
               />
             </label>
-          ) : isCropping ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div style={{ position: 'relative', height: '400px', width: '100%', background: '#333', borderRadius: '24px', overflow: 'hidden' }}>
-                <Cropper
-                  image={preview!}
-                  crop={crop}
-                  zoom={zoom}
-                  aspect={undefined}
-                  onCropChange={setCrop}
-                  onCropComplete={onCropComplete}
-                  onZoomChange={setZoom}
-                />
-              </div>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button
-                  onClick={saveCroppedImage}
-                  className="btn-primary"
-                  style={{ flex: 1, padding: '16px' }}
-                >
-                  <Crop size={20} />
-                  <span>CROP & CONTINUE</span>
-                </button>
-                <button
-                  onClick={() => setIsCropping(false)}
-                  style={{ padding: '16px', background: '#f1f5f9', border: 'none', borderRadius: '16px', color: '#64748b', fontWeight: '700', cursor: 'pointer' }}
-                >
-                  Skip
-                </button>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '12px', fontWeight: '800', color: '#64748b' }}>ZOOM</span>
-                <input
-                  type="range"
-                  value={zoom}
-                  min={1}
-                  max={3}
-                  step={0.1}
-                  aria-labelledby="Zoom"
-                  onChange={(e: any) => setZoom(e.target.value)}
-                  style={{ flex: 1, accentColor: 'var(--primary)' }}
-                />
-              </div>
-            </div>
           ) : (
             <div 
               style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}
@@ -322,11 +325,45 @@ export default function FileUploader({ onUploadSuccess, endpoint = "/api/analyze
                     alt="Preview"
                     className="preview-img"
                   />
+                  
+                  {/* Crop Image Overlay Button */}
+                  {!loading && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setIsCropping(true); }}
+                      style={{ 
+                        position: 'absolute', 
+                        bottom: '24px', 
+                        left: '50%', 
+                        transform: 'translateX(-50%)',
+                        background: 'rgba(255, 255, 255, 0.9)',
+                        backdropFilter: 'blur(8px)',
+                        border: '1px solid #e2e8f0',
+                        padding: '10px 24px',
+                        borderRadius: '100px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        color: '#1e1b4b',
+                        fontWeight: '700',
+                        fontSize: '14px',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                        cursor: 'pointer',
+                        zIndex: 5,
+                        transition: 'all 0.2s'
+                      }}
+                      className="crop-overlay-btn"
+                    >
+                      <Crop size={18} />
+                      Crop Image
+                    </button>
+                  )}
+
                   {files.length > 1 && (
-                    <div style={{ position: 'absolute', bottom: '12px', right: '12px', background: 'var(--primary)', color: 'white', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '800' }}>
-                      +{files.length - 1} more
+                    <div style={{ position: 'absolute', top: '12px', left: '12px', background: '#8b5cf6', color: 'white', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '800', boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)', zIndex: 6 }}>
+                      +{files.length - 1} MORE IMAGES
                     </div>
                   )}
+
                   {isDragging && (
                     <div style={{ position: 'absolute', inset: 0, background: 'rgba(59, 130, 246, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', borderRadius: '24px', backdropFilter: 'blur(4px)', zIndex: 10 }}>
                       <div className="flex flex-col items-center gap-2">
@@ -406,6 +443,62 @@ export default function FileUploader({ onUploadSuccess, endpoint = "/api/analyze
               </div>
             </div>
           )
+        )}
+
+        {isCropping && preview && (
+          <div className="fade-in" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.98)', zIndex: 1000, display: 'flex', flexDirection: 'column' }}>
+            {/* Header */}
+            <div style={{ padding: '20px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'white', marginBottom: '2px' }}>Adjust Crop</h3>
+                <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)' }}>Drag corners to resize selection</p>
+              </div>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <button 
+                  onClick={() => setRotation((r) => (r + 90) % 360)}
+                  style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', padding: '10px 16px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                >
+                  <RotateCw size={18} />
+                  <span>Rotate</span>
+                </button>
+                <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', margin: '0 8px' }} />
+                <button
+                  onClick={cancelCrop}
+                  style={{ padding: '10px 20px', background: 'transparent', border: 'none', color: 'white', fontWeight: '700', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveCroppedImage}
+                  style={{ padding: '12px 32px', background: '#7c3aed', border: 'none', borderRadius: '10px', color: 'white', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 15px rgba(124, 58, 237, 0.4)' }}
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+
+            {/* Cropper Area */}
+            <div style={{ flex: 1, position: 'relative', overflow: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '40px' }}>
+              <ReactCrop
+                crop={crop}
+                onChange={(c) => setCrop(c)}
+                onComplete={(c) => setCompletedCrop(c)}
+              >
+                <img
+                  src={preview}
+                  alt="Crop"
+                  onLoad={onImageLoad}
+                  style={{ 
+                    display: 'block',
+                    maxWidth: '100%', 
+                    maxHeight: '75vh', 
+                    transform: `rotate(${rotation}deg)`,
+                    transition: 'transform 0.3s ease'
+                  }}
+                />
+              </ReactCrop>
+            </div>
+          </div>
         )}
 
         {mode === "paste" && (
@@ -513,7 +606,30 @@ export default function FileUploader({ onUploadSuccess, endpoint = "/api/analyze
         .uploader-dropzone {
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+
+        /* Premium Handle-based Cropper Styles */
+        :global(.ReactCrop) {
+          border-radius: 8px;
+          overflow: hidden;
+        }
+        :global(.ReactCrop__crop-selection) {
+          border: 2px solid #7c3aed !important;
+          box-shadow: 0 0 0 9999em rgba(0, 0, 0, 0.7) !important;
+        }
+        :global(.ReactCrop__drag-handle) {
+          background-color: #7c3aed !important;
+          width: 14px !important;
+          height: 14px !important;
+          border: 2px solid white !important;
+          border-radius: 50% !important;
+        }
+        :global(.ReactCrop__drag-handle::after) {
+          display: none !important;
+        }
       `}</style>
+
+
+
     </div>
   );
 }
